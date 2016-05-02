@@ -36,25 +36,31 @@ class DevicesTableViewController: UITableViewController {
       title = "\(selectedPerson.name)'s Devices"
     } else {
       title = "Devices"
-      navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .Add, target: self, action: "addDevice:")
+      navigationItem.rightBarButtonItems =
+        [UIBarButtonItem(barButtonSystemItem: .Add, target: self, action: #selector(DevicesTableViewController.addDevice(_:))),
+         UIBarButtonItem(title: "Filter", style: .Plain, target: self, action: #selector(DevicesTableViewController.selectFilter(_:)))]
     }
   }
 
   override func viewWillAppear(animated: Bool) {
     super.viewWillAppear(animated)
-
+    
     reloadData()
-    tableView.reloadData()
   }
 
-  func reloadData() {
+    func reloadData(deviceTypeFilter: String? = nil) {
     if let selectedPerson = selectedPerson {
       if let personDevices = selectedPerson.devices.allObjects as? [Device] {
         devices = personDevices
       }
     } else {
+        
       let fetchRequest = NSFetchRequest(entityName: "Device")
-
+        
+        if let deviceTypeFilter = deviceTypeFilter{
+            let filterPredicate = NSPredicate(format: "deviceType =[c] %@", deviceTypeFilter)
+            fetchRequest.predicate = filterPredicate
+        }
       do {
         if let results = try managedObjectContext.executeFetchRequest(fetchRequest) as? [Device] {
           devices = results
@@ -63,6 +69,8 @@ class DevicesTableViewController: UITableViewController {
         fatalError("There was an error fetching the list of devices!")
       }
     }
+        tableView.reloadData()
+   
   }
 
   // MARK: - Table view data source
@@ -91,12 +99,33 @@ class DevicesTableViewController: UITableViewController {
   func addDevice(sender: AnyObject?) {
     performSegueWithIdentifier("deviceDetail", sender: self)
   }
+    
+  func selectFilter(sender:AnyObject?) {
+    
+        let sheet = UIAlertController(title: "Filter Options", message: nil, preferredStyle: .ActionSheet)
+        
+        sheet.addAction(UIAlertAction(title: "Cancel", style: .Cancel) { (action) in
+            })
+        
+        sheet.addAction(UIAlertAction(title: "Show All", style: .Default) { (action) in
+            self.reloadData()
+            })
+        
+        sheet.addAction(UIAlertAction(title: "Only Phones", style: .Default) { (action) in
+            self.reloadData("iPhone")
+            })
+        
+        sheet.addAction(UIAlertAction(title: "Only Watches", style: .Default) { (action) in
+            self.reloadData("Watch")
+            })
+    
+        presentViewController(sheet, animated: true, completion: nil)
+    }
 
   override func shouldPerformSegueWithIdentifier(identifier: String, sender: AnyObject?) -> Bool {
     if selectedPerson != nil && identifier == "deviceDetail" {
       return false
     }
-
     return true
   }
 
